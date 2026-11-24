@@ -1,5 +1,17 @@
 # McBackup 1.0.0
 
+> **Why this exists.** We run a survival server (Arka SMP) and a lost world is the one thing that cannot be
+> replaced. We wanted automatic backups that are cheap, tidy and verifiable. So we built McBackup as part of our
+> all-in-one server setup, and it works well for us, so we are sharing it with all of you. It is free software (AGPL-3.0).
+
+It is one of three plugins we built together as a suite, and it works fine on **any** Paper server on its own:
+
+| Plugin | What it does |
+|---|---|
+| [ArkaSMPCore](https://github.com/DHANVIN-raj-velagapudi/ArkaSMPCore) | Homes, spawn, TPA, RTP, warps, claims, AFK, leaderboards, stats, cleaner |
+| [ArkaSMPEconomy](https://github.com/DHANVIN-raj-velagapudi/ArkaSMPEconomy) | Rupee money, `/pay`, `/baltop`, `/trade`, item shop, `/sellgui` |
+| **McBackup** (this repo) | Incremental hourly/daily/weekly backups to a cloud bucket |
+
 Incremental Minecraft backups straight from a Paper server to a Google Cloud Storage bucket
 (or any S3-compatible bucket). Built for this scheme:
 
@@ -116,6 +128,16 @@ signature-checking mock bucket, and the plugin commands).
 schedule; end-to-end backup/daily/weekly/restore against a mock S3. **Not tested here:** a real Paper 26.3
 server and the real Google Cloud Storage service (neither is reachable from the build environment).
 Do the first run on a copy of your server or at a quiet time, and use `/mcbackup test` first.
+
+## 9. Status, contributing and support
+
+McBackup is **young software**. Test it on a copy of your server first, run `/mcbackup test` and `/mcbackup verify`
+on real snapshots, and practise a restore **before** you need one. Never rely on a backup you have not restored.
+
+- **Found a bug or want a feature?** Open an [issue](../../issues) with your server version, what you did and the
+  console output.
+- **Want to improve it?** Fork it and send a pull request. Run the tests (section 8) before you do.
+- Please keep the license: if you build on this and run it publicly, your changes must stay open too.
 
 ## License
 
