@@ -1,0 +1,15 @@
+name: McBackup
+main: io.mcbackup.McBackupPlugin
+version: 1.0.0
+api-version: '1.21'
+description: Incremental hourly/daily/weekly backups to an S3-compatible bucket (Google Cloud Storage supported).
+author: Dhanvin
+commands:
+  mcbackup:
+    description: Manage McBackup
+    usage: /mcbackup <now|status|list|verify|restore|test|cancel|reload>
+    permission: mcbackup.admin
+permissions:
+  mcbackup.admin:
+    description: Use /mcbackup
+    default: op

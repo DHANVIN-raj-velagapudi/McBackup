@@ -1,0 +1,9 @@
+target/
+build/
+*.jar
+*.class
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

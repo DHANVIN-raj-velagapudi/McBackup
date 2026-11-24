@@ -1,0 +1,61 @@
+# McBackup - incremental backups to an S3-compatible bucket.
+# Google Cloud Storage: Cloud Storage > Settings > Interoperability > create an HMAC key
+# for a service account that has the "Storage Object Admin" role on THIS bucket only.
+
+storage:
+  endpoint: "https://storage.googleapis.com"
+  region: "auto"
+  bucket: "YOUR-BUCKET"
+  prefix: "minecraft"          # folder inside the bucket; use a dedicated one
+  # Keep keys private. If your host supports environment variables, set
+  # MCBACKUP_ACCESS_KEY and MCBACKUP_SECRET_KEY instead (they take priority over these).
+  access-key: ""
+  secret-key: ""
+
+schedule:
+  timezone: "Asia/Kolkata"
+  hourly-minute: 5             # hourly backup at HH:05
+  daily-time: "00:00"          # final backup of the day; replaces that day's hourly backups
+  weekly-day: "SUNDAY"
+  weekly-time: "00:30"         # weekly backup; replaces the week's daily backups
+
+retention:
+  keep-weekly: 4
+  # Safety caps, only reached if daily/weekly jobs keep failing:
+  max-hourly: 48
+  max-daily: 14
+
+backup:
+  server-dir: ""               # empty = the server folder (parent of plugins/)
+  pause-saving: true           # save-all flush + save-off while files are copied (recommended)
+                               # Autosave is only off for the quick raw copy; compressing happens after save-on.
+  # Console commands run right BEFORE saving is paused / right AFTER it is back on.
+  # Plugins that keep a database file need this so the copy is complete and consistent.
+  before-commands:
+    - "arkaeco flush"          # ArkaSMPEconomy: writes economy.db fully to disk
+  after-commands:
+    - "arkaeco resume"
+  exclude:                     # glob patterns relative to the server folder
+    - "logs/**"
+    - "cache/**"
+    - "crash-reports/**"
+    - "libraries/**"
+    - "versions/**"
+    - "**/session.lock"
+    - "**/*.tmp"
+
+performance:
+  compression-level: 3         # 1 (fast) .. 9 (small)
+  upload-threads: 2
+  max-upload-mbps: 0           # 0 = unlimited
+  retry-minutes: 10            # wait after a failed scheduled backup before trying again
+
+notify:
+  enabled: true
+  # Staff who get the detailed notice (type + size). Server operators (OPs) always get it too.
+  admins:
+    - "YourName"
+  # Everyone else gets this general notice. No sizes or details. Use & for colour codes.
+  public-message: "&e[Backup] A backup is taking place. You may notice some lag. This is for your safety."
+  # {type} = hourly/daily/weekly, {size} = size of the changed data being backed up
+  admin-message: "&e[Backup] A {type} backup of {size} (changed data) is starting."
