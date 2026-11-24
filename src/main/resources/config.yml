@@ -2,6 +2,11 @@
 # Google Cloud Storage: Cloud Storage > Settings > Interoperability > create an HMAC key
 # for a service account that has the "Storage Object Admin" role on THIS bucket only.
 
+# MANAGED BY THE PLUGIN - DO NOT CHANGE THIS LINE. It stores the plugin version that last updated this file.
+# When you install a newer version, new options are added below automatically and your settings are kept
+# (a backup of the old file goes to the config-backups folder).
+config-version: "auto"
+
 storage:
   endpoint: "https://storage.googleapis.com"
   region: "auto"

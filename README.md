@@ -1,4 +1,4 @@
-# McBackup 1.0.0
+# McBackup
 
 > **Why this exists.** We run a survival server (Arka SMP) and a lost world is the one thing that cannot be
 > replaced. We wanted automatic backups that are cheap, tidy and verifiable. So we built McBackup as part of our
@@ -31,7 +31,7 @@ Nothing is deleted until the new backup has been fully uploaded and committed.
 
 ## 2. Install
 
-1. Put `McBackup-1.0.0.jar` in the server's `plugins/` folder and start the server once.
+1. Put `McBackup-<version>.jar` in the server's `plugins/` folder and start the server once.
 2. Edit `plugins/McBackup/config.yml`: `bucket`, `prefix`, `access-key`, `secret-key`.
    (If your host supports environment variables, set `MCBACKUP_ACCESS_KEY` and `MCBACKUP_SECRET_KEY`
    instead; they take priority and keep the secret out of the file.)
@@ -82,8 +82,8 @@ Every file is checked against its SHA-256 while it is restored; a corrupt backup
 **Without the server (e.g. after losing everything)**, from any computer with Java 21+:
 ```
 export MCBACKUP_BUCKET=your-bucket MCBACKUP_ACCESS_KEY=... MCBACKUP_SECRET_KEY=... MCBACKUP_PREFIX=minecraft
-java -jar McBackup-1.0.0.jar list
-java -jar McBackup-1.0.0.jar restore daily/20261124T183000Z ./restored-world
+java -jar McBackup-<version>.jar list
+java -jar McBackup-<version>.jar restore daily/20261124T183000Z ./restored-world
 ```
 Note: the plugin's own folder (`plugins/McBackup`, including your keys) is deliberately never backed up,
 so you'll need to re-enter the keys after a full restore.
@@ -129,7 +129,18 @@ schedule; end-to-end backup/daily/weekly/restore against a mock S3. **Not tested
 server and the real Google Cloud Storage service (neither is reachable from the build environment).
 Do the first run on a copy of your server or at a quiet time, and use `/mcbackup test` first.
 
-## 9. Status, contributing and support
+## 9. Versions and updating
+
+Every release gets a new version number (`MAJOR.MINOR.PATCH`). The history is in [CHANGELOG.md](CHANGELOG.md), and
+the jar name carries the version (`./build.sh` reads it from `plugin.yml`).
+
+**Your `config.yml` updates itself.** It stores the plugin version that last updated it
+(`config-version: "1.1.0"`, **please do not change this line**). When you install a newer jar, McBackup saves a backup
+of your config in `plugins/McBackup/config-backups/`, adds the options that are new (with comments), keeps every value
+you set (including your keys), raises `config-version` and tells you in the console. A config with a YAML mistake is
+left exactly as it is.
+
+## 10. Status, contributing and support
 
 McBackup is **young software**. Test it on a copy of your server first, run `/mcbackup test` and `/mcbackup verify`
 on real snapshots, and practise a restore **before** you need one. Never rely on a backup you have not restored.

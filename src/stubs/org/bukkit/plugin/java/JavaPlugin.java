@@ -19,6 +19,8 @@ public abstract class JavaPlugin implements Plugin {
     public Logger getLogger() { return Logger.getLogger("McBackupTest"); }
     public FileConfiguration getConfig() { return TEST_CONFIG; }
     public void saveDefaultConfig() { }
+    public java.io.InputStream getResource(String name) { return null; }
+    public io.papermc.paper.plugin.configuration.PluginMeta getPluginMeta() { return () -> "test"; }
     public void reloadConfig() { }
     public File getDataFolder() { return TEST_DATA; }
     public Server getServer() { return TEST_SERVER; }

@@ -85,6 +85,9 @@ public final class McBackupPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // adds options that are new in this version to config.yml and keeps the admin's own values
+        ConfigUpdater.update(getDataFolder(), () -> getResource("config.yml"), getPluginMeta().getVersion(),
+                getLogger(), java.util.Set.of());
         saveDefaultConfig();
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> daemon(r, "McBackup-Scheduler"));
         helpers = Executors.newCachedThreadPool(r -> daemon(r, "McBackup-Helper"));
