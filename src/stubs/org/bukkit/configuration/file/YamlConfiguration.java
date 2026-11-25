@@ -8,14 +8,10 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 /** STUB for compiling only. Tests never reach it: they have no config.yml. The real class comes from Paper. */
 public class YamlConfiguration implements ConfigurationSection {
-    public static class Options {
-        public List<String> getHeader() { throw new UnsupportedOperationException(); }
-        public Options setHeader(List<String> h) { throw new UnsupportedOperationException(); }
-    }
     public void load(File f) throws IOException, InvalidConfigurationException { throw new UnsupportedOperationException(); }
     public void load(Reader r) throws IOException, InvalidConfigurationException { throw new UnsupportedOperationException(); }
     public String saveToString() { throw new UnsupportedOperationException(); }
-    public Options options() { throw new UnsupportedOperationException(); }
+    public YamlConfigurationOptions options() { throw new UnsupportedOperationException(); }
     public Set<String> getKeys(boolean deep) { throw new UnsupportedOperationException(); }
     public boolean contains(String path) { throw new UnsupportedOperationException(); }
     public boolean isConfigurationSection(String path) { throw new UnsupportedOperationException(); }
