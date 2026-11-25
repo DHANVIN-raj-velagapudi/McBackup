@@ -140,6 +140,12 @@ of your config in `plugins/McBackup/config-backups/`, adds the options that are 
 you set (including your keys), raises `config-version` and tells you in the console. A config with a YAML mistake is
 left exactly as it is.
 
+Your plugin folder is also protected on version changes: before anything is loaded, a snapshot of its files (config,
+backup log, local cache) is copied to `plugins/McBackup/data-backups/` (the last 5 are kept). If the folder was
+written by a newer data format, an older jar stays idle instead of touching it. Upgrading or downgrading does not
+rewrite the backups already in your **bucket**, and the clean-up never deletes stored data files while any snapshot
+cannot be read.
+
 ## 10. Status, contributing and support
 
 McBackup is **young software**. Test it on a copy of your server first, run `/mcbackup test` and `/mcbackup verify`

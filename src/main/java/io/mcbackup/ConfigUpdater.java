@@ -108,8 +108,13 @@ public final class ConfigUpdater {
 
             writeAtomic(file, stamp(user.saveToString(), version));
             String from = stored.isEmpty() ? "an older version" : stored;
-            log.info("config.yml updated from " + from + " to " + version + ": " + added.size()
-                    + " new option(s) added, all your own settings were kept.");
+            if (!stored.isEmpty() && DataGuard.compareVersions(stored, version) > 0) {
+                log.warning("config.yml was last used by a NEWER version (" + stored + "); this is " + version
+                        + ". All your settings were kept, options this older version does not know stay in the file.");
+            } else {
+                log.info("config.yml updated from " + from + " to " + version + ": " + added.size()
+                        + " new option(s) added, all your own settings were kept.");
+            }
             if (!added.isEmpty()) {
                 log.info("New options: " + String.join(", ", added.subList(0, Math.min(added.size(), 25)))
                         + (added.size() > 25 ? ", ..." : ""));

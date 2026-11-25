@@ -85,6 +85,10 @@ public final class McBackupPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // Data safety first: snapshot the plugin's files on every version change; never touch newer-format data.
+        if (!DataGuard.check(getDataFolder(), getPluginMeta().getVersion(), 1, getLogger()).proceed()) {
+            return;   // stay idle: no backups are scheduled, nothing is changed
+        }
         // adds options that are new in this version to config.yml and keeps the admin's own values
         ConfigUpdater.update(getDataFolder(), () -> getResource("config.yml"), getPluginMeta().getVersion(),
                 getLogger(), java.util.Set.of());

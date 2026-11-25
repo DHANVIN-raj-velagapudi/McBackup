@@ -3,6 +3,12 @@
 All notable changes to McBackup. Versions follow `MAJOR.MINOR.PATCH`: a fix raises the last number, a new feature
 the middle one, a breaking change the first. Every release raises the version.
 
+## 1.2.0
+
+### Added
+- **Safe upgrades and downgrades.** A snapshot of the plugin folder is saved to `data-backups/` on every version
+  change (last 5 kept). An older jar that finds data from a newer format stays idle instead of touching it.
+
 ## 1.1.0
 
 ### Added
