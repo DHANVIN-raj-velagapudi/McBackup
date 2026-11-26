@@ -70,6 +70,12 @@ public final class BackupService {
         this.state = loadState();
     }
 
+    /** A failure that is not fatal: goes to the plugin error log (with its stack trace); the command line tool just prints it. */
+    private void reportFailure(String what, Exception e) {
+        if (hooks == SnapshotEngine.Hooks.NOOP) log.warning("[McBackup] " + what + ": " + e.getMessage());
+        else hooks.failed(what, e);
+    }
+
     public String runningJob() {
         return running;
     }
@@ -96,7 +102,7 @@ public final class BackupService {
             log.info("[McBackup] " + due.id + " backup OK - " + s.describe());
         } catch (Exception e) {
             lastFailMillis.put(due, System.currentTimeMillis());
-            log.severe("[McBackup] " + due.id + " backup FAILED (retry in " + cfg.retryMinutes + " min): " + e.getMessage());
+            reportFailure(due.id + " backup FAILED (retry in " + cfg.retryMinutes + " min)", e);
         }
         return true;
     }
@@ -308,7 +314,7 @@ public final class BackupService {
             Files.writeString(f, out.toString(), java.nio.charset.StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
         } catch (Exception e) {
-            log.warning("[McBackup] could not write backup-log.md: " + e.getMessage());
+            reportFailure("could not write backup-log.md", e);
         }
     }
 
@@ -340,7 +346,7 @@ public final class BackupService {
                 p.store(out, "McBackup statistics");
             }
         } catch (IOException e) {
-            log.warning("[McBackup] could not save statistics: " + e.getMessage());
+            reportFailure("could not save statistics", e);
         }
     }
 
@@ -416,7 +422,7 @@ public final class BackupService {
                 p.store(out, "McBackup schedule state");
             }
         } catch (IOException e) {
-            log.warning("[McBackup] could not save schedule state: " + e.getMessage());
+            reportFailure("could not save schedule state", e);
         }
     }
 }

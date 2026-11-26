@@ -26,8 +26,9 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class McBackupPlugin extends JavaPlugin {
 
-    private static final List<String> SUBCOMMANDS = List.of("now", "status", "stats", "list", "verify", "restore", "test", "cancel", "reload");
+    private static final List<String> SUBCOMMANDS = List.of("now", "status", "stats", "list", "verify", "restore", "test", "cancel", "reload", "errors");
 
+    private volatile ErrorLog errors;
     private volatile BackupService service;
     private volatile ZoneId zone = ZoneId.of("Asia/Kolkata");
     private volatile boolean savingPaused;
@@ -46,6 +47,11 @@ public final class McBackupPlugin extends JavaPlugin {
         @Override
         public void starting(Tier tier, long changedBytes) {
             announce(tier, changedBytes);
+        }
+
+        @Override
+        public void failed(String what, Throwable error) {
+            errors.error("backup", what, error);
         }
 
         @Override
@@ -76,7 +82,7 @@ public final class McBackupPlugin extends JavaPlugin {
                 runOnMainThread(cmds.toArray(new String[0]));
                 savingPaused = false;
             } catch (Exception e) {
-                getLogger().severe("[McBackup] COULD NOT RE-ENABLE AUTOSAVE. Run  /save-on  in the console now. (" + e.getMessage() + ")");
+                errors.error("backup.autosave", "COULD NOT RE-ENABLE AUTOSAVE. Run  /save-on  in the console now.", e);
             }
         }
     };
@@ -85,6 +91,19 @@ public final class McBackupPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // The error log comes first, so even a failure while starting is written to logs/errors.log.
+        errors = new ErrorLog(getLogger(), getDataFolder(), "McBackup",
+                "McBackup " + getPluginMeta().getVersion() + " | Java " + System.getProperty("java.version"), "io.mcbackup.");
+        errors.start();
+        try {
+            enable();
+        } catch (RuntimeException | Error t) {
+            errors.error("startup", "McBackup could not start", t);
+            throw t;
+        }
+    }
+
+    private void enable() {
         // Data safety first: snapshot the plugin's files on every version change; never touch newer-format data.
         if (!DataGuard.check(getDataFolder(), getPluginMeta().getVersion(), 1, getLogger()).proceed()) {
             return;   // stay idle: no backups are scheduled, nothing is changed
@@ -120,6 +139,7 @@ public final class McBackupPlugin extends JavaPlugin {
             }
             savingPaused = false;
         }
+        if (errors != null) errors.stop();
     }
 
     private static Thread daemon(Runnable r, String name) {
@@ -135,7 +155,7 @@ public final class McBackupPlugin extends JavaPlugin {
         try {
             s.tick(ZonedDateTime.now(zone));
         } catch (Throwable t) {
-            getLogger().severe("[McBackup] scheduler error: " + t);
+            errors.error("scheduler", "The scheduled backup check failed", t);
         }
     }
 
@@ -151,8 +171,7 @@ public final class McBackupPlugin extends JavaPlugin {
         } catch (Exception e) {
             service = null;
             configProblem = e.getMessage();
-            getLogger().warning("[McBackup] not active yet: " + e.getMessage()
-                    + " - edit plugins/McBackup/config.yml, then run /mcbackup reload");
+            errors.error("config", "Not active yet - edit plugins/McBackup/config.yml, then run /mcbackup reload", e);
         }
     }
 
@@ -248,11 +267,11 @@ public final class McBackupPlugin extends JavaPlugin {
                         if (!m.isBlank()) p.sendMessage(m);
                     }
                 } catch (Throwable t) {
-                    getLogger().warning("[McBackup] could not send backup notice: " + t);
+                    errors.error("notify", "Could not send the backup notice to players", t);
                 }
             });
         } catch (Throwable t) {
-            getLogger().warning("[McBackup] could not send backup notice: " + t);
+            errors.error("notify", "Could not send the backup notice to players", t);
         }
     }
 
@@ -290,6 +309,16 @@ public final class McBackupPlugin extends JavaPlugin {
 
         @Override
         public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            try {
+                return handle(sender, args);
+            } catch (RuntimeException | LinkageError t) {
+                String id = errors.error("command.mcbackup", "/" + label + " failed", t, "args", String.join(" ", args));
+                reply(sender, "Something went wrong. Please tell an admin this number: " + id);
+                return true;
+            }
+        }
+
+        private boolean handle(CommandSender sender, String[] args) {
             if (args.length == 0) {
                 reply(sender, "Usage: /mcbackup <now [hourly|daily|weekly] | status | list | verify <id> | restore <id> | test | cancel | reload>");
                 return true;
@@ -297,6 +326,17 @@ public final class McBackupPlugin extends JavaPlugin {
             String sub = args[0].toLowerCase(Locale.ROOT);
             if (sub.equals("reload")) {
                 return reload(sender);
+            }
+            if (sub.equals("errors")) {   // works even when the backup is not configured yet
+                if (args.length > 1 && args[1].equalsIgnoreCase("test")) {
+                    String id = errors.warn("errors.test", "Test entry written by /mcbackup errors test");
+                    reply(sender, "Wrote test entry " + id + " to plugins/McBackup/logs/errors.log");
+                } else {
+                    List<String> recent = errors.recent(8);
+                    reply(sender, "Error log (" + recent.size() + " recent), file: plugins/McBackup/logs/errors.log"
+                            + (recent.isEmpty() ? "\nNo problems recorded since the server started." : "\n" + String.join("\n", recent)));
+                }
+                return true;
             }
             BackupService s = service;
             if (s == null) {
@@ -367,7 +407,8 @@ public final class McBackupPlugin extends JavaPlugin {
                 try {
                     reply(sender, tier.id + " backup finished: " + s.runJob(tier, ZonedDateTime.now(zone)).describe());
                 } catch (Exception e) {
-                    reply(sender, tier.id + " backup FAILED: " + e.getMessage());
+                    String id = errors.error("backup.manual", tier.id + " backup FAILED", e);
+                    reply(sender, tier.id + " backup FAILED: " + e.getMessage() + " (error " + id + ")");
                 }
             });
         }
@@ -389,7 +430,8 @@ public final class McBackupPlugin extends JavaPlugin {
                 try {
                     reply(sender, job.get());
                 } catch (Exception e) {
-                    reply(sender, "Failed: " + e.getMessage());
+                    String id = errors.error("command.mcbackup", "A /mcbackup job failed", e);
+                    reply(sender, "Failed: " + e.getMessage() + " (error " + id + ")");
                 }
             });
         }

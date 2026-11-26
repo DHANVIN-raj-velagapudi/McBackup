@@ -56,6 +56,9 @@ public final class SnapshotEngine {
         /** Called just before the copy phase starts. changedBytes = uncompressed size of files that must be uploaded. */
         default void starting(Tier tier, long changedBytes) { }
 
+        /** Called when a scheduled backup or a background save fails, with the full exception (for the error log). */
+        default void failed(String what, Throwable error) { }
+
         Hooks NOOP = new Hooks() {
             @Override public void beforeCopy() { }
             @Override public void afterCopy() { }

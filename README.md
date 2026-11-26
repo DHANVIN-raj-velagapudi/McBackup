@@ -72,6 +72,14 @@ messages can be edited (`&` colour codes, `{type}` and `{size}` for staff), or t
 | `/mcbackup restore <id>` | Downloads a snapshot into `plugins/McBackup/restore/...` (live files are NOT touched) |
 | `/mcbackup cancel` | Stops a running backup between files |
 | `/mcbackup reload` | Re-reads config.yml |
+| `/mcbackup errors [test]` | Shows the last problems from `logs/errors.log`; `test` writes a test entry |
+
+## Error log
+
+If something goes wrong, McBackup writes it to `plugins/McBackup/logs/errors.log` (and a short line to the console): a
+numbered entry with the time, version, which part failed and the full stack trace. To get a problem diagnosed, send that
+one file. In game, `/mcbackup errors` shows the latest entries and `/mcbackup errors test` writes a test entry. The same
+problem is written at most 5 times a minute and the file rotates at 2 MB.
 
 ## 4. Restoring
 

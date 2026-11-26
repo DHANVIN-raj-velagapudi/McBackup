@@ -3,6 +3,21 @@
 All notable changes to McBackup. Versions follow `MAJOR.MINOR.PATCH`: a fix raises the last number, a new feature
 the middle one, a breaking change the first. Every release raises the version.
 
+## 1.3.0
+
+### Added
+- **Error log.** When something goes wrong McBackup writes a readable entry to `plugins/McBackup/logs/errors.log` and a
+  short line to the console. Each entry has a number (like `E-1A2`), the time, the plugin version, which part failed
+  (scheduled backup, manual backup, autosave, config, notices...) and the full stack trace. Send that one file to get
+  a problem diagnosed.
+- A failed scheduled backup, a failed `/mcbackup now`, a failed autosave re-enable (`/save-on`), a config problem and
+  every warning McBackup logs are all recorded. A crash inside `/mcbackup` shows an error number instead of a stack
+  trace.
+- `/mcbackup errors` shows the last problems in game (it works even when the backup is not configured yet) and
+  `/mcbackup errors test` writes a test entry to check the file works.
+- The same problem is written at most 5 times a minute, the file rotates at 2 MB (3 old files are kept), and writing
+  happens on its own thread so it cannot slow a backup or the game down.
+
 ## 1.2.1
 
 ### Fixed
