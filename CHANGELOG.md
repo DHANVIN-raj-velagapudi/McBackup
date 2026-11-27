@@ -3,6 +3,20 @@
 All notable changes to McBackup. Versions follow `MAJOR.MINOR.PATCH`: a fix raises the last number, a new feature
 the middle one, a breaking change the first. Every release raises the version.
 
+## 1.4.0
+
+### Changed (a backup now uses much less CPU; restores work exactly as before)
+- **World region files, jars and images are no longer compressed at full effort.** `.mca` files (and `.mcc`, `.jar`, `.zip`, `.gz`,
+  `.png`, `.ogg`...) are already compressed inside, so gzip at level 3 spent most of a backup's CPU for almost no gain. They now use
+  `performance.precompressed-level` (default 1, the cheapest). Any gzip level reads back the same, so old backups restore normally.
+- **The compress step may use only half of one CPU core** (`performance.cpu-limit-percent`, default 50; 100 = no limit). It sleeps
+  between slices of work, so a backup takes a little longer but the game keeps its CPU. Only the quick raw copy (while autosave is
+  paused) and the upload are not limited.
+
+### Added
+- New options `performance.cpu-limit-percent`, `performance.precompressed-level` and `performance.precompressed-extensions`. They are
+  added to your `config.yml` automatically; your own values are kept.
+
 ## 1.3.0
 
 ### Added

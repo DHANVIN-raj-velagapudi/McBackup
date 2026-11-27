@@ -51,6 +51,13 @@ backup:
 
 performance:
   compression-level: 3         # 1 (fast) .. 9 (small)
+  # The compress step is the part that uses CPU. It may use this share of ONE core (the rest of the time it
+  # sleeps), so a backup takes a little longer but the game stays smooth. 100 = no limit.
+  cpu-limit-percent: 50
+  # World region files (.mca), jars and images are already compressed inside; gzip at the normal level only burns
+  # CPU for almost no gain. These file types use precompressed-level instead (0 = store, 1 = fastest).
+  precompressed-level: 1
+  precompressed-extensions: ["mca", "mcc", "jar", "zip", "gz", "zst", "xz", "7z", "png", "jpg", "jpeg", "ogg", "mp3", "mp4"]
   upload-threads: 2
   max-upload-mbps: 0           # 0 = unlimited
   retry-minutes: 10            # wait after a failed scheduled backup before trying again

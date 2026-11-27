@@ -43,6 +43,7 @@ public final class TestMain {
         try { testSchedule(); } catch (Throwable t) { crash("schedule", t); }
         try { testManifest(); } catch (Throwable t) { crash("manifest", t); }
         try { testEndToEnd(); } catch (Throwable t) { crash("e2e", t); }
+        try { testPerformance(); } catch (Throwable t) { crash("performance", t); }
         try { testPluginShell(); } catch (Throwable t) { crash("plugin", t); }
         System.out.println("\n" + passed + " passed, " + failed + " failed");
         System.exit(failed == 0 ? 0 : 1);
@@ -147,6 +148,43 @@ public final class TestMain {
         // server was down over midnight and starts at 14:00
         Schedule.State old = new Schedule.State("2026-11-23T22", LocalDate.of(2026, 11, 23), LocalDate.of(2026, 11, 22));
         check(Schedule.due(ZonedDateTime.of(2026, 11, 24, 14, 20, 0, 0, z), old, c) == Tier.DAILY, "catch-up daily after downtime");
+    }
+
+    // ------------------------------------------------------------------ CPU use of the compress step
+    static void spin(long millis) {
+        long end = System.nanoTime() + millis * 1_000_000L;
+        while (System.nanoTime() < end) { /* busy work */ }
+    }
+
+    static long timed(SnapshotEngine.Throttle t) throws IOException {
+        long t0 = System.nanoTime();
+        t.restart();
+        for (int i = 0; i < 20; i++) { spin(5); t.pace(); }   // 100 ms of work
+        return (System.nanoTime() - t0) / 1_000_000L;
+    }
+
+    static void testPerformance() throws Exception {
+        section("Compression level and CPU limit");
+        BackupConfig c = new BackupConfig();
+        SnapshotEngine eng = new SnapshotEngine(c, null, null, Logger.getLogger("test"));
+        check(eng.levelFor("world/region/r.0.0.mca") == c.precompressedLevel, "region files use the cheap level");
+        check(eng.levelFor("world/region/R.1.1.MCA") == c.precompressedLevel, "extension match ignores case");
+        check(eng.levelFor("plugins/Foo/Foo.jar") == c.precompressedLevel, "jars use the cheap level");
+        check(eng.levelFor("plugins/Other/config.yml") == c.compressionLevel, "text files keep the normal level");
+        check(eng.levelFor("LICENSE") == c.compressionLevel, "a file without an extension keeps the normal level");
+        check(eng.levelFor("odd.mca/notes") == c.compressionLevel, "a dot in a folder name is not an extension");
+        c.precompressedExtensions = new ArrayList<>(List.of("dat"));
+        check(eng.levelFor("world/level.dat") == c.precompressedLevel && eng.levelFor("world/r.mca") == c.compressionLevel,
+                "the extension list comes from the config");
+
+        long free = timed(new SnapshotEngine.Throttle(100));
+        long half = timed(new SnapshotEngine.Throttle(50));
+        check(free < 160, "100% does not sleep (" + free + " ms for 100 ms of work)");
+        check(half >= 170 && half < 600, "50% roughly doubles the time so the core is free half the time (" + half + " ms)");
+        boolean bad = false;
+        try { BackupConfig b = new BackupConfig(); b.cpuLimitPercent = 1; b.bucket = "b"; b.accessKey = "a"; b.secretKey = "s";
+            b.serverDir = Path.of("."); b.dataDir = Path.of("."); b.validate(); } catch (IllegalArgumentException e) { bad = true; }
+        check(bad, "a cpu limit below 5% is rejected");
     }
 
     // ------------------------------------------------------------------ manifest

@@ -215,6 +215,10 @@ public final class McBackupPlugin extends JavaPlugin {
 
         bc.compressionLevel = c.getInt("performance.compression-level", bc.compressionLevel);
         bc.uploadThreads = c.getInt("performance.upload-threads", bc.uploadThreads);
+        bc.cpuLimitPercent = c.getInt("performance.cpu-limit-percent", bc.cpuLimitPercent);
+        bc.precompressedLevel = c.getInt("performance.precompressed-level", bc.precompressedLevel);
+        List<String> pre = c.getStringList("performance.precompressed-extensions");
+        if (!pre.isEmpty()) bc.precompressedExtensions = new ArrayList<>(pre);
         bc.maxUploadMbps = c.getDouble("performance.max-upload-mbps", 0);
         bc.retryMinutes = c.getInt("performance.retry-minutes", bc.retryMinutes);
 

@@ -158,9 +158,10 @@ public final class SnapshotEngine {
             }
 
             // ---- compress phase (saving is back on) ----
+            Throttle throttle = new Throttle(cfg.cpuLimitPercent);
             for (RawCopy rc : raws) {
                 checkCancel(cancel);
-                CompressResult p = compress(rc.raw(), tmpDir);
+                CompressResult p = compress(rc.raw(), levelFor(rc.info().rel()), tmpDir, throttle);
                 Files.deleteIfExists(rc.raw());
                 String sha = p.sha;
                 if (remote.contains(sha) || prepared.containsKey(sha)) {
@@ -251,22 +252,78 @@ public final class SnapshotEngine {
         }
     }
 
-    private CompressResult compress(Path source, Path tmpDir) throws IOException {
+    /**
+     * World region files, jars and images are already compressed inside, so the normal level spends CPU for almost
+     * no gain. They use the cheap level instead. Restoring does not care: any gzip level reads the same.
+     */
+    int levelFor(String rel) {
+        int dot = rel.lastIndexOf('.');
+        if (dot < 0 || dot < rel.lastIndexOf('/')) return cfg.compressionLevel;
+        String ext = rel.substring(dot + 1).toLowerCase(java.util.Locale.ROOT);
+        for (String e : cfg.precompressedExtensions) {
+            if (e.equalsIgnoreCase(ext)) return cfg.precompressedLevel;
+        }
+        return cfg.compressionLevel;
+    }
+
+    /**
+     * Keeps the compress step to a share of one CPU core: after every slice of work it sleeps long enough that the
+     * work was {@code percent} of the elapsed time. 100 means no limit. Only used after saving is back on.
+     */
+    static final class Throttle {
+        private final int percent;
+        private long mark = System.nanoTime();
+        private long debt;
+
+        Throttle(int percent) {
+            this.percent = percent;
+        }
+
+        /** Call once per slice of work (for example every 256 KB). */
+        void pace() throws IOException {
+            if (percent >= 100) return;
+            long now = System.nanoTime();
+            debt += (now - mark) * (100 - percent) / percent;
+            if (debt >= 10_000_000L) {                       // sleep in slices of at least 10 ms
+                try {
+                    Thread.sleep(debt / 1_000_000L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new CancelledException();
+                }
+                debt = 0;
+            }
+            mark = System.nanoTime();
+        }
+
+        /** Start of a new file: time spent before this point is not counted as work. */
+        void restart() {
+            mark = System.nanoTime();
+        }
+    }
+
+    private CompressResult compress(Path source, int level, Path tmpDir, Throttle throttle) throws IOException {
         Path tmp = Files.createTempFile(tmpDir, "blob", ".gz");
         MessageDigest raw = sha256();
         MessageDigest comp = sha256();
         long rawLen = 0;
         boolean ok = false;
         try {
+            throttle.restart();
             try (InputStream in = Files.newInputStream(source);
                  OutputStream fos = new DigestOutputStream(new BufferedOutputStream(Files.newOutputStream(tmp), 64 * 1024), comp);
-                 LevelGzip gz = new LevelGzip(fos, cfg.compressionLevel)) {
+                 LevelGzip gz = new LevelGzip(fos, level)) {
                 byte[] buf = new byte[64 * 1024];
                 int n;
+                int slice = 0;
                 while ((n = in.read(buf)) != -1) {
                     raw.update(buf, 0, n);
                     gz.write(buf, 0, n);
                     rawLen += n;
+                    if (++slice == 4) {                      // every 256 KB
+                        slice = 0;
+                        throttle.pace();
+                    }
                 }
             }
             String sha = HexFormat.of().formatHex(raw.digest());

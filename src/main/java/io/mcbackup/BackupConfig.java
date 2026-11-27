@@ -13,6 +13,9 @@ public final class BackupConfig {
             "logs/**", "cache/**", "crash-reports/**", "libraries/**", "versions/**",
             "**/session.lock", "**/*.tmp");
 
+    public static final List<String> DEFAULT_PRECOMPRESSED = List.of(
+            "mca", "mcc", "jar", "zip", "gz", "zst", "xz", "7z", "png", "jpg", "jpeg", "ogg", "mp3", "mp4");
+
     // storage (S3-compatible; Google Cloud Storage via interoperability keys)
     public String endpoint = "https://storage.googleapis.com";
     public String region = "auto";
@@ -41,6 +44,11 @@ public final class BackupConfig {
     // behaviour
     public boolean pauseSaving = true;
     public int compressionLevel = 3;
+    /** Files that are already compressed inside (world region files, jars, images) gain almost nothing from gzip. */
+    public List<String> precompressedExtensions = new ArrayList<>(DEFAULT_PRECOMPRESSED);
+    public int precompressedLevel = 1;
+    /** The compress step may use this share of one CPU core (100 = no limit). The rest of the time it sleeps. */
+    public int cpuLimitPercent = 50;
     public int uploadThreads = 2;
     public double maxUploadMbps = 0; // 0 = unlimited
     public int retryMinutes = 10;    // wait this long after a failed scheduled job before retrying
@@ -69,5 +77,7 @@ public final class BackupConfig {
         if (hourlyMinute < 0 || hourlyMinute > 59) throw new IllegalArgumentException("hourly-minute must be 0-59");
         if (compressionLevel < 1 || compressionLevel > 9) throw new IllegalArgumentException("compression-level must be 1-9");
         if (uploadThreads < 1 || uploadThreads > 8) throw new IllegalArgumentException("upload-threads must be 1-8");
+        if (precompressedLevel < 0 || precompressedLevel > 9) throw new IllegalArgumentException("precompressed-level must be 0-9");
+        if (cpuLimitPercent < 5 || cpuLimitPercent > 100) throw new IllegalArgumentException("cpu-limit-percent must be 5-100");
     }
 }
